@@ -404,7 +404,7 @@ export interface Progress {
 /**
  * `analyzeSlackExport` rejects with a `SlackExportError` whose `code` is one of: 'not-a-zip',
  * 'not-a-slack-export', 'no-messages' (nothing written by people in the period), 'invalid-period'.
- * An aborted run rejects with the signal's reason (an AbortError by default).
+ * An aborted run rejects with an error named 'AbortError'; a custom abort reason is kept as its `cause`.
  */
 export interface AnalyzeOptions {
   /** Used for workspace.name when given (e.g. derived from the zip file name). */

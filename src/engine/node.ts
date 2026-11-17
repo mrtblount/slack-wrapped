@@ -5,15 +5,17 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { basename, join, relative, resolve, sep } from 'node:path';
 import type { ExportSource } from './types';
-import { findExportRoot } from './sources';
+import { findExportRoot, preferLabel } from './sources';
 
 /**
  * An unzipped Slack export in a folder. If the folder only wraps the real export (channels.json is
- * one level down), that inner folder is used. The folder's name is the label.
+ * one level down), that inner folder is used. The folder's name is the label, unless only the inner
+ * folder's name says which workspace this is.
  */
 export function dirSource(path: string): ExportSource {
   const base = resolve(path);
   let listing: Promise<{ root: string; paths: string[] }> | undefined;
+  let wrapper = '';
 
   const load = async (): Promise<{ root: string; paths: string[] }> => {
     const found: string[] = [];
@@ -22,11 +24,15 @@ export function dirSource(path: string): ExportSource {
       found.push(relative(base, join(entry.parentPath, entry.name)).split(sep).join('/'));
     }
     const root = findExportRoot(found);
+    wrapper = root;
     return { root, paths: found.filter((file) => file.startsWith(root)).map((file) => file.slice(root.length)) };
   };
 
   return {
-    label: basename(base),
+    // The folder's own name, or the inner folder's when only that one is named like an export.
+    get label() {
+      return preferLabel(basename(base), wrapper);
+    },
     list: async () => (await (listing ??= load())).paths,
     readText: async (file) => {
       const { root } = await (listing ??= load());

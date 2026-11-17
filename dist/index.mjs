@@ -5167,12 +5167,30 @@ var SlackExportError = class extends Error {
     this.code = code;
   }
 };
+var NotASlackExportError = class extends SlackExportError {
+  constructor(message, options) {
+    super("not-a-slack-export", message, options);
+    this.name = "NotASlackExportError";
+  }
+};
+var EmptyExportError = class extends SlackExportError {
+  constructor(message, options) {
+    super("no-messages", message, options);
+    this.name = "EmptyExportError";
+  }
+};
 function abortError(signal) {
   const reason = signal.reason;
-  if (reason instanceof Error) return reason;
-  if (typeof DOMException === "function") return new DOMException("The analysis was cancelled.", "AbortError");
-  const error = new Error("The analysis was cancelled.");
-  error.name = "AbortError";
+  if (reason instanceof Error && reason.name === "AbortError") return reason;
+  const message = reason instanceof Error && reason.message !== "" ? reason.message : typeof reason === "string" && reason !== "" ? reason : "The analysis was cancelled.";
+  let error;
+  if (typeof DOMException === "function") {
+    error = new DOMException(message, "AbortError");
+  } else {
+    error = new Error(message);
+    error.name = "AbortError";
+  }
+  if (reason !== void 0) Object.defineProperty(error, "cause", { value: reason, configurable: true, writable: true });
   return error;
 }
 
@@ -9728,7 +9746,8 @@ async function openZip(blob, mode) {
     sizes: Float64Array.from(sizes),
     methods: Uint8Array.from(methods),
     viaZipJs: kept,
-    reader
+    reader,
+    root
   };
   for (let i = 0; i < names.length; i++) {
     const name = names[i];
@@ -9760,9 +9779,19 @@ async function readEntry(index, entry) {
 }
 function zipSourceWith(blob, label, mode) {
   let index;
-  const open = () => index ??= openZip(blob, mode);
+  let root = "";
+  const open = () => index ??= openZip(blob, mode).then((opened) => {
+    root = opened.root;
+    return opened;
+  });
   const decoder = new TextDecoder("utf-8");
+  const name = label ?? blob.name;
+  const given = typeof name === "string" && name !== "" ? name : void 0;
   const source = {
+    // Once the zip is open, a wrapping folder named like an export can supply the workspace name.
+    get label() {
+      return preferLabel(given, root);
+    },
     list: async () => (await open()).paths,
     readText: async (path) => {
       const opened = await open();
@@ -9771,8 +9800,6 @@ function zipSourceWith(blob, label, mode) {
       return decoder.decode(await readEntry(opened, entry));
     }
   };
-  const name = label ?? blob.name;
-  if (typeof name === "string" && name !== "") source.label = name;
   return source;
 }
 function zipSource(blob, label) {
@@ -9786,7 +9813,14 @@ function workspaceNameFromLabel(label) {
     const workspace = name.slice(0, marker).trim();
     if (workspace !== "") return workspace;
   }
-  return "Your team";
+  return UNKNOWN_WORKSPACE;
+}
+var UNKNOWN_WORKSPACE = "Your team";
+function preferLabel(given, root) {
+  if (root === "") return given;
+  if (given !== void 0 && workspaceNameFromLabel(given) !== UNKNOWN_WORKSPACE) return given;
+  const folder = root.replace(/\/+$/, "");
+  return workspaceNameFromLabel(folder) === UNKNOWN_WORKSPACE ? given : folder.slice(folder.lastIndexOf("/") + 1);
 }
 
 // src/engine/stopwords.ts
@@ -10540,14 +10574,13 @@ async function analyze(source, options = {}, tuning = {}) {
     else files.push({ path, day });
   }
   if (!hasChannelsFile) {
-    throw new SlackExportError(
-      "not-a-slack-export",
+    throw new NotASlackExportError(
       "This does not look like a Slack export: there is no channels.json in it. Export your workspace from Slack (Settings, then Import/Export Data) and drop that zip here unchanged."
     );
   }
   const channelRecords = await readArray(read, "channels.json");
   if (channelRecords === null) {
-    throw new SlackExportError("not-a-slack-export", "The channels.json in this export could not be read, so the channels are unknown.");
+    throw new NotASlackExportError("The channels.json in this export could not be read, so the channels are unknown.");
   }
   const userRecords = hasUsersFile ? await readArray(read, "users.json") : null;
   if (userRecords === null) {
@@ -10653,8 +10686,7 @@ async function analyze(source, options = {}, tuning = {}) {
     maxDay = Math.max(maxDay, channel.files[channel.files.length - 1].day);
   }
   if (totalDayFiles === 0) {
-    throw new SlackExportError(
-      "no-messages",
+    throw new EmptyExportError(
       wantPrivate || !hasGroupsFile ? "This export has no messages in any channel." : "This export has no messages in public channels. Its private channels are only read when you choose to include them."
     );
   }
@@ -11321,11 +11353,10 @@ async function analyze(source, options = {}, tuning = {}) {
   if (current !== void 0) finishChannel(current);
   throwIfAborted2();
   if (plan.length > 0 && skippedFiles >= plan.length) {
-    throw new SlackExportError("no-messages", "None of the day files in this export could be read.");
+    throw new EmptyExportError("None of the day files in this export could be read.");
   }
   if (totalMessages === 0) {
-    throw new SlackExportError(
-      "no-messages",
+    throw new EmptyExportError(
       `No messages from people were found between ${longDate(startDay)} and ${longDate(endDay)}.`
     );
   }
@@ -11707,13 +11738,16 @@ async function analyze(source, options = {}, tuning = {}) {
   }
   const teamId = mostCommon(teamIds);
   const workspaceId = (await sha256Hex(teamId ?? [...users.size > 0 ? users.keys() : people.keys()].sort().join(","))).slice(0, 32);
+  const workspaceName = [str(options.workspaceName), workspaceNameFromLabel(source.label ?? ""), root === "" ? "" : workspaceNameFromLabel(root)].find(
+    (name) => name !== "" && name !== UNKNOWN_WORKSPACE
+  ) ?? UNKNOWN_WORKSPACE;
   const result = {
     schema: SCHEMA_VERSION,
     platform: "slack",
     generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
     workspace: {
       id: workspaceId,
-      name: str(options.workspaceName) || workspaceNameFromLabel(source.label ?? "")
+      name: workspaceName
     },
     period,
     totals: {
@@ -11792,6 +11826,8 @@ export {
   AWARD_CATALOG,
   AWARD_ORDER,
   CHANNEL_AWARD_CATALOG,
+  EmptyExportError,
+  NotASlackExportError,
   SCHEMA_VERSION,
   SlackExportError,
   analyzeSlackExport,

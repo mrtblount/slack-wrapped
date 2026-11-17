@@ -155,6 +155,8 @@ interface ZipIndex {
   /** Entries that are read through zip.js: unusual compression, or a runtime without native inflate. */
   viaZipJs: Map<number, FileEntry>;
   reader: BlobWindowReader;
+  /** The folder that wrapped the export inside the zip ('' when there was none). */
+  root: string;
 }
 
 /** How entry data is read: by this module where it can ('direct'), or always through zip.js. */
@@ -201,6 +203,7 @@ async function openZip(blob: Blob, mode: ZipReadMode): Promise<ZipIndex> {
     methods: Uint8Array.from(methods),
     viaZipJs: kept,
     reader,
+    root,
   };
   for (let i = 0; i < names.length; i++) {
     const name = names[i]!;
@@ -236,9 +239,20 @@ async function readEntry(index: ZipIndex, entry: number): Promise<Uint8Array> {
 /** `zipSource` with the reading mode chosen by hand. For tests. */
 export function zipSourceWith(blob: Blob, label: string | undefined, mode: ZipReadMode): ExportSource {
   let index: Promise<ZipIndex> | undefined;
-  const open = (): Promise<ZipIndex> => (index ??= openZip(blob, mode));
+  let root = '';
+  const open = (): Promise<ZipIndex> =>
+    (index ??= openZip(blob, mode).then((opened) => {
+      root = opened.root;
+      return opened;
+    }));
   const decoder = new TextDecoder('utf-8');
+  const name = label ?? (blob as { name?: unknown }).name;
+  const given = typeof name === 'string' && name !== '' ? name : undefined;
   const source: ExportSource = {
+    // Once the zip is open, a wrapping folder named like an export can supply the workspace name.
+    get label() {
+      return preferLabel(given, root);
+    },
     list: async () => (await open()).paths,
     readText: async (path) => {
       const opened = await open();
@@ -247,8 +261,6 @@ export function zipSourceWith(blob: Blob, label: string | undefined, mode: ZipRe
       return decoder.decode(await readEntry(opened, entry));
     },
   };
-  const name = label ?? (blob as { name?: unknown }).name;
-  if (typeof name === 'string' && name !== '') source.label = name;
   return source;
 }
 
@@ -256,7 +268,8 @@ export function zipSourceWith(blob: Blob, label: string | undefined, mode: ZipRe
  * A Slack export zip. zip.js reads the zip's central directory (Zip64 included) to find the entries;
  * each file is then read on demand, so the archive is never loaded whole and archives of many
  * gigabytes work. No web worker is started. A single folder wrapping the export is stripped.
- * `label` defaults to the file's name when `blob` is a File.
+ * `label` defaults to the file's name when `blob` is a File; if that says nothing about the workspace
+ * (a renamed zip), the wrapping folder's name is used once the zip has been opened.
  */
 export function zipSource(blob: Blob, label?: string): ExportSource {
   return zipSourceWith(blob, label, hasNativeInflate() ? 'direct' : 'zip.js');
@@ -274,5 +287,19 @@ export function workspaceNameFromLabel(label: string): string {
     const workspace = name.slice(0, marker).trim();
     if (workspace !== '') return workspace;
   }
-  return 'Your team';
+  return UNKNOWN_WORKSPACE;
+}
+
+/** What `workspaceNameFromLabel` answers when a label says nothing about the workspace. */
+export const UNKNOWN_WORKSPACE = 'Your team';
+
+/**
+ * The label to name the workspace from: the one given, unless it says nothing about the workspace and
+ * the folder that wrapped the export does ("Acme Inc Slack export Jan 1 2026 - Dec 9 2026/").
+ */
+export function preferLabel(given: string | undefined, root: string): string | undefined {
+  if (root === '') return given;
+  if (given !== undefined && workspaceNameFromLabel(given) !== UNKNOWN_WORKSPACE) return given;
+  const folder = root.replace(/\/+$/, '');
+  return workspaceNameFromLabel(folder) === UNKNOWN_WORKSPACE ? given : folder.slice(folder.lastIndexOf('/') + 1);
 }

@@ -8742,11 +8742,29 @@ function findExportRoot(paths) {
   }
   return best ?? "";
 }
+function workspaceNameFromLabel(label) {
+  let name = String(label ?? "").replace(/\\/g, "/").replace(/\/+$/, "");
+  name = name.slice(name.lastIndexOf("/") + 1).replace(/\.zip$/i, "");
+  const marker = name.search(/\s+slack\s+export\b/i);
+  if (marker > 0) {
+    const workspace = name.slice(0, marker).trim();
+    if (workspace !== "") return workspace;
+  }
+  return UNKNOWN_WORKSPACE;
+}
+var UNKNOWN_WORKSPACE = "Your team";
+function preferLabel(given, root) {
+  if (root === "") return given;
+  if (given !== void 0 && workspaceNameFromLabel(given) !== UNKNOWN_WORKSPACE) return given;
+  const folder = root.replace(/\/+$/, "");
+  return workspaceNameFromLabel(folder) === UNKNOWN_WORKSPACE ? given : folder.slice(folder.lastIndexOf("/") + 1);
+}
 
 // src/engine/node.ts
 function dirSource(path) {
   const base = resolve(path);
   let listing;
+  let wrapper = "";
   const load = async () => {
     const found = [];
     for (const entry of await readdir(base, { recursive: true, withFileTypes: true })) {
@@ -8754,10 +8772,14 @@ function dirSource(path) {
       found.push(relative(base, join(entry.parentPath, entry.name)).split(sep).join("/"));
     }
     const root = findExportRoot(found);
+    wrapper = root;
     return { root, paths: found.filter((file) => file.startsWith(root)).map((file) => file.slice(root.length)) };
   };
   return {
-    label: basename(base),
+    // The folder's own name, or the inner folder's when only that one is named like an export.
+    get label() {
+      return preferLabel(basename(base), wrapper);
+    },
     list: async () => (await (listing ??= load())).paths,
     readText: async (file) => {
       const { root } = await (listing ??= load());

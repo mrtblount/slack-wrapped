@@ -23,11 +23,11 @@ import {
 import { computeAwards } from './awards';
 import { computeChannelAwards } from './channel-awards';
 import { canonicalEmoji, emojiRef, isStandardEmoji } from './emoji';
-import { abortError, SlackExportError } from './errors';
+import { abortError, EmptyExportError, NotASlackExportError, SlackExportError } from './errors';
 import { formatInt, round1, round2, round4 } from './format';
 import { sha256Hex } from './hash';
 import { choosePersonality } from './personality';
-import { findExportRoot, workspaceNameFromLabel } from './sources';
+import { findExportRoot, UNKNOWN_WORKSPACE, workspaceNameFromLabel } from './sources';
 import { STOPWORDS } from './stopwords';
 import { countBits, LAUGH_STYLES, TextAnalyzer } from './text';
 import {
@@ -376,14 +376,13 @@ export async function analyze(
   }
 
   if (!hasChannelsFile) {
-    throw new SlackExportError(
-      'not-a-slack-export',
+    throw new NotASlackExportError(
       'This does not look like a Slack export: there is no channels.json in it. Export your workspace from Slack (Settings, then Import/Export Data) and drop that zip here unchanged.',
     );
   }
   const channelRecords = await readArray(read, 'channels.json');
   if (channelRecords === null) {
-    throw new SlackExportError('not-a-slack-export', 'The channels.json in this export could not be read, so the channels are unknown.');
+    throw new NotASlackExportError('The channels.json in this export could not be read, so the channels are unknown.');
   }
   const userRecords = hasUsersFile ? await readArray(read, 'users.json') : null;
   if (userRecords === null) {
@@ -500,8 +499,7 @@ export async function analyze(
     maxDay = Math.max(maxDay, channel.files[channel.files.length - 1]!.day);
   }
   if (totalDayFiles === 0) {
-    throw new SlackExportError(
-      'no-messages',
+    throw new EmptyExportError(
       wantPrivate || !hasGroupsFile
         ? 'This export has no messages in any channel.'
         : 'This export has no messages in public channels. Its private channels are only read when you choose to include them.',
@@ -1263,11 +1261,10 @@ export async function analyze(
   throwIfAborted();
 
   if (plan.length > 0 && skippedFiles >= plan.length) {
-    throw new SlackExportError('no-messages', 'None of the day files in this export could be read.');
+    throw new EmptyExportError('None of the day files in this export could be read.');
   }
   if (totalMessages === 0) {
-    throw new SlackExportError(
-      'no-messages',
+    throw new EmptyExportError(
       `No messages from people were found between ${longDate(startDay)} and ${longDate(endDay)}.`,
     );
   }
@@ -1726,13 +1723,19 @@ export async function analyze(
     await sha256Hex(teamId ?? [...(users.size > 0 ? users.keys() : people.keys())].sort().join(','))
   ).slice(0, 32);
 
+  // The name given by the caller, else what the file name says, else what a wrapping folder's name says.
+  const workspaceName =
+    [str(options.workspaceName), workspaceNameFromLabel(source.label ?? ''), root === '' ? '' : workspaceNameFromLabel(root)].find(
+      (name) => name !== '' && name !== UNKNOWN_WORKSPACE,
+    ) ?? UNKNOWN_WORKSPACE;
+
   const result: WrappedData = {
     schema: SCHEMA_VERSION,
     platform: 'slack',
     generatedAt: new Date().toISOString(),
     workspace: {
       id: workspaceId,
-      name: str(options.workspaceName) || workspaceNameFromLabel(source.label ?? ''),
+      name: workspaceName,
     },
     period,
     totals: {

@@ -16,9 +16,12 @@ import { analyze } from './analyze';
 /**
  * Analyses a Slack export.
  *
- * Rejects with a `SlackExportError` (see `code`) when the input is not a usable Slack export or
- * holds no messages from people in the period, and with the signal's abort reason when
- * `options.signal` aborts.
+ * Rejects with an error that can be recognised by its `name`:
+ *  - `NotASlackExportError` when there is no readable channels.json (after looking through a wrapping folder);
+ *  - `EmptyExportError` when the export holds no messages from people in the chosen period;
+ *  - `AbortError` when `options.signal` aborts;
+ *  - `SlackExportError` (with `code` 'not-a-zip' or 'invalid-period') for a file that is not a zip, or a bad period.
+ * The first two extend `SlackExportError` and carry `code` 'not-a-slack-export' and 'no-messages'.
  */
 export function analyzeSlackExport(source: ExportSource, options?: AnalyzeOptions): Promise<WrappedData> {
   return analyze(source, options);
@@ -27,6 +30,6 @@ export function analyzeSlackExport(source: ExportSource, options?: AnalyzeOption
 export { memorySource, workspaceNameFromLabel, zipSource } from './sources';
 export { AWARD_CATALOG, AWARD_ORDER, type AwardInfo } from './awards';
 export { CHANNEL_AWARD_CATALOG } from './channel-awards';
-export { SlackExportError, type SlackExportErrorCode } from './errors';
+export { EmptyExportError, NotASlackExportError, SlackExportError, type SlackExportErrorCode } from './errors';
 export { SCHEMA_VERSION } from './types';
 export type * from './types';

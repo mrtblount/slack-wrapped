@@ -170,6 +170,14 @@ describe('which channels are read', () => {
     const data = await analyzeSlackExport(memorySource(wrapped));
     expect(data.totals.messages).toBe(1);
     expect(data.channels.map((c) => c.name)).toEqual(['general']);
+    expect(data.workspace.name).toBe('Acme');
+
+    // What a browser hands over when someone drops the folder that holds the unzipped export.
+    const dropped: Record<string, string> = {};
+    for (const [path, content] of Object.entries(b.files())) dropped[`FizzBuzz Industries Slack export Jan 1 2026 - Mar 10 2026/${path}`] = content;
+    const fromFolder = await analyzeSlackExport(memorySource(dropped, 'Downloads'), { workspaceName: 'Your team' });
+    expect(fromFolder.totals.messages).toBe(1);
+    expect(fromFolder.workspace.name).toBe('FizzBuzz Industries');
   });
 
   it('finds a channel folder named by id, and matches names across Unicode forms', async () => {

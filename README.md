@@ -108,7 +108,7 @@ The result type, `WrappedData`, is documented field by field in
 Slack's export format has a few surprises, found while testing against real exports from 2016 to 2023.
 They are written up in [`SLACK-EXPORT-FORMAT.md`](SLACK-EXPORT-FORMAT.md), for anyone building on the same
 files. The short version: day files are cut on Pacific time whatever your workspace's timezone, huddles
-have no subtype, and join events cover only a few members.
+have no subtype, the `upload` flag cannot be trusted, and join events cover only a few members.
 
 ## Development
 

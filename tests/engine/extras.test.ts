@@ -374,10 +374,21 @@ describe('progress and cancelling', () => {
     await expect(run).rejects.toMatchObject({ name: 'AbortError' });
     expect(seen).toBe(50);
 
+    // Whatever reason the caller aborts with, what comes out is named AbortError and keeps the reason.
     const reason = new Error('the user closed the tab');
     const withReason = new AbortController();
     withReason.abort(reason);
-    await expect(manyDays().analyze({ signal: withReason.signal })).rejects.toBe(reason);
+    const thrown = await manyDays().analyze({ signal: withReason.signal }).catch((error: unknown) => error);
+    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown).toMatchObject({ name: 'AbortError', message: 'the user closed the tab', cause: reason });
+
+    const withText = new AbortController();
+    withText.abort('tab closed');
+    await expect(manyDays().analyze({ signal: withText.signal })).rejects.toMatchObject({ name: 'AbortError', message: 'tab closed' });
+
+    const timedOut = AbortSignal.timeout(1);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await expect(manyDays().analyze({ signal: timedOut })).rejects.toMatchObject({ name: 'AbortError' });
   });
 });
 

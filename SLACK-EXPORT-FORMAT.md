@@ -187,11 +187,14 @@ Checked against eight public repositories, four of them real exports from 2016 t
    therefore sit in a file whose name is not their UTC date. Always classify by `ts`.
 2. **Huddles have no subtype.** They are messages with `user: "USLACKBOT"`, empty `text`, and a `room` object
    carrying `call_family: "huddle"`. `created_by` can be missing from `participant_history`. Detect them by `room`.
-3. **Files.** Since about 2020 files are in `files[]` and `upload` is usually false. Up to 2018 an upload is
+3. **Files.** The `upload` flag is unreliable (false on almost every file message in a 2023 export, on
+   only 61 of 406 in a 2020 one): count files from `files[]`. Up to 2018 an upload is
    `subtype: "file_share"` with a single `file` object and generated text such as
    `<@U…|name> uploaded a file: <url|title> and commented: …`. Deleted files are `{ id, mode: "tombstone" }`.
-4. **`channel_join` does not cover everyone in the general channel** in modern exports (2 of 51 people in a
-   2023 export, 21 of 1,195 in a 2020 one). It cannot be the only source of join dates.
+4. **`channel_join` does not cover everyone in the general channel** in modern exports (71 of 71 members
+   in a 2016 export, but 21 of 1,195 in a 2020 one and 2 of 51 in a 2023 one). It cannot be the only source
+   of join dates. `reply_count`, by contrast, is reliable: it matched the replies present on all 4,336
+   thread roots in the two largest real exports.
 5. **Bots.** `USLACKBOT` is not listed in users.json. Old exports put `bot_id: null` on human messages. A
    `/giphy` post has a human `user` and a real `bot_id`.
 6. **Smaller differences.** `created` is a string up to 2018. Extra subtypes: `reply_broadcast`,

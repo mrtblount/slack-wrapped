@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeSlackExport, memorySource, SlackExportError } from '../../src/engine/index';
+import { analyzeSlackExport, EmptyExportError, memorySource, NotASlackExportError, SlackExportError } from '../../src/engine/index';
 import { ExportBuilder, findBadValues, person, smallTeam } from './helpers';
 
 const DAY = '2026-03-10';
@@ -232,12 +232,46 @@ describe('robustness', () => {
     expect(JSON.parse(JSON.stringify(data))).toEqual(data);
   });
 
-  it('rejects things that are not a Slack export with a clear error', async () => {
-    await expect(analyzeSlackExport(memorySource({ 'readme.txt': 'hello' }))).rejects.toMatchObject({ code: 'not-a-slack-export' });
-    await expect(analyzeSlackExport(memorySource({ 'channels.json': '{broken' }))).rejects.toBeInstanceOf(SlackExportError);
-    await expect(
-      analyzeSlackExport(memorySource({ 'channels.json': '[{"id":"C1","name":"general"}]', 'users.json': '[]' })),
-    ).rejects.toMatchObject({ code: 'no-messages' });
+  it('rejects things that are not a Slack export with an error that can be recognised by name', async () => {
+    const notAnExport = await analyzeSlackExport(memorySource({ 'readme.txt': 'hello', 'photos/2026-03-10.json': '[]' })).catch((error: unknown) => error);
+    expect(notAnExport).toBeInstanceOf(NotASlackExportError);
+    expect(notAnExport).toBeInstanceOf(SlackExportError);
+    expect(notAnExport).toBeInstanceOf(Error);
+    expect(notAnExport).toMatchObject({ name: 'NotASlackExportError', code: 'not-a-slack-export' });
+    expect((notAnExport as Error).message).toMatch(/does not look like a Slack export/);
+    // The same when the folder is nested, when only users.json is there, and when channels.json is unreadable.
+    await expect(analyzeSlackExport(memorySource({ 'wrapper/readme.txt': 'hello' }))).rejects.toMatchObject({ name: 'NotASlackExportError' });
+    await expect(analyzeSlackExport(memorySource({ 'users.json': '[]' }))).rejects.toMatchObject({ name: 'NotASlackExportError' });
+    await expect(analyzeSlackExport(memorySource({ 'channels.json': '{broken' }))).rejects.toMatchObject({ name: 'NotASlackExportError', code: 'not-a-slack-export' });
+    await expect(analyzeSlackExport(memorySource({}))).rejects.toMatchObject({ name: 'NotASlackExportError' });
+  });
+
+  it('rejects an export with nothing from people in the period with an error named EmptyExportError', async () => {
+    const noDayFiles = await analyzeSlackExport(memorySource({ 'channels.json': '[{"id":"C1","name":"general"}]', 'users.json': '[]' })).catch((error: unknown) => error);
+    expect(noDayFiles).toBeInstanceOf(EmptyExportError);
+    expect(noDayFiles).toBeInstanceOf(SlackExportError);
+    expect(noDayFiles).toMatchObject({ name: 'EmptyExportError', code: 'no-messages' });
+
+    // Only bots and system events.
+    const b = smallTeam();
+    b.add('general', at('09:00:00'), { subtype: 'bot_message', bot_id: 'B1', text: 'build passed' });
+    b.add('general', at('09:01:00'), { subtype: 'channel_join', user: 'U1', text: 'joined' });
+    await expect(b.analyze()).rejects.toMatchObject({ name: 'EmptyExportError', code: 'no-messages' });
+
+    // People wrote, but not in the chosen period.
+    const other = smallTeam();
+    other.post('general', 'U1', at('09:00:00'), 'hello');
+    const outside = await other.analyze({ period: { start: '2024-01-01', end: '2024-12-31' } }).catch((error: unknown) => error);
+    expect(outside).toMatchObject({ name: 'EmptyExportError' });
+    expect((outside as Error).message).toBe('No messages from people were found between January 1, 2024 and December 31, 2024.');
+
+    // Every day file unreadable.
+    const broken = smallTeam();
+    broken.file('general/2026-03-10.json', 'not json');
+    await expect(broken.analyze()).rejects.toMatchObject({ name: 'EmptyExportError' });
+
+    // A bad period is neither of the two.
+    await expect(other.analyze({ period: { start: 'x', end: 'y' } })).rejects.toMatchObject({ name: 'SlackExportError', code: 'invalid-period' });
   });
 
   it('works without users.json, and says so', async () => {

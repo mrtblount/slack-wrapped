@@ -1,6 +1,6 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { analyzeSlackExport, memorySource, workspaceNameFromLabel, zipSource } from '../../src/engine/index';
 import { dirSource } from '../../src/engine/node';
@@ -49,7 +49,27 @@ describe('zip source', () => {
     expect(JSON.parse(await source.readText('channels.json'))).toHaveLength(2);
     const data = await analyzeSlackExport(source);
     expect(data.totals.messages).toBe(4);
-    expect(data.workspace.name).toBe('Your team');
+    // Nothing else names the workspace, so the wrapping folder does.
+    expect(data.workspace.name).toBe('Acme Inc');
+  });
+
+  it('names the workspace from the wrapping folder when the zip was renamed', async () => {
+    const wrapped: Record<string, string> = {};
+    for (const [path, content] of Object.entries(sampleExport().files())) wrapped[`Acme Inc Slack export Jan 1 2026 - Mar 11 2026/${path}`] = content;
+    const blob = await zipOf(wrapped);
+    const renamed = zipSource(blob, 'export (3).zip');
+    expect(renamed.label).toBe('export (3).zip');
+    expect((await analyzeSlackExport(renamed)).workspace.name).toBe('Acme Inc');
+    expect(renamed.label).toBe('Acme Inc Slack export Jan 1 2026 - Mar 11 2026');
+    // The app passes whatever the dropped file's name gave it, which is "Your team" for a renamed zip.
+    expect((await analyzeSlackExport(zipSource(blob, 'export (3).zip'), { workspaceName: 'Your team' })).workspace.name).toBe('Acme Inc');
+    // A file name that does say, or a name the caller chose, wins over the folder.
+    expect((await analyzeSlackExport(zipSource(blob, 'Globex Slack export Jan 1 2026 - Mar 11 2026.zip'))).workspace.name).toBe('Globex');
+    expect((await analyzeSlackExport(zipSource(blob, 'export.zip'), { workspaceName: 'Plant People' })).workspace.name).toBe('Plant People');
+    // A wrapping folder with an ordinary name tells us nothing.
+    const plain: Record<string, string> = {};
+    for (const [path, content] of Object.entries(sampleExport().files())) plain[`my-export/${path}`] = content;
+    expect((await analyzeSlackExport(zipSource(await zipOf(plain), 'export.zip'))).workspace.name).toBe('Your team');
   });
 
   it('reads Zip64 archives', async () => {
@@ -195,6 +215,12 @@ describe('finding the export root', () => {
 });
 
 describe('directory source', () => {
+  // Scratch folders live inside the repository (tests/engine/.tmp, git-ignored) and are removed after each test.
+  const scratch = join(dirname(fileURLToPath(import.meta.url)), '.tmp');
+  const newFolder = (): string => {
+    mkdirSync(scratch, { recursive: true });
+    return mkdtempSync(join(scratch, 'export-'));
+  };
   let folder: string | undefined;
   afterEach(() => {
     if (folder) rmSync(folder, { recursive: true, force: true });
@@ -209,7 +235,7 @@ describe('directory source', () => {
   };
 
   it('reads an unzipped export from a folder', async () => {
-    folder = mkdtempSync(join(tmpdir(), 'teamwrapped-test-'));
+    folder = newFolder();
     const root = join(folder, 'Acme Inc Slack export Jan 1 2026 - Mar 11 2026');
     const files = sampleExport().files();
     write(root, { ...files, 'channels.json': `\uFEFF${files['channels.json']}`, 'notes.txt': 'not part of the export' });
@@ -223,10 +249,16 @@ describe('directory source', () => {
   });
 
   it('looks one folder down when the export is wrapped', async () => {
-    folder = mkdtempSync(join(tmpdir(), 'teamwrapped-test-'));
+    folder = newFolder();
     write(join(folder, 'unzipped', 'inner export'), sampleExport().files());
     const data = await analyzeSlackExport(dirSource(join(folder, 'unzipped')));
     expect(data.totals.messages).toBe(4);
+    expect(data.workspace.name).toBe('Your team');
+
+    write(join(folder, 'Downloads', 'Acme Inc Slack export Jan 1 2026 - Mar 11 2026'), sampleExport().files());
+    const named = await analyzeSlackExport(dirSource(join(folder, 'Downloads')));
+    expect(named.totals.messages).toBe(4);
+    expect(named.workspace.name).toBe('Acme Inc');
   });
 });
 
