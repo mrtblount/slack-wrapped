@@ -1,0 +1,49 @@
+{
+  "name": "slack-wrapped",
+  "version": "0.1.0",
+  "description": "Turn a Slack workspace export into a year in review with data-picked awards. Runs locally; nothing is uploaded.",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://teamwrapped.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mrtblount/slack-wrapped.git"
+  },
+  "keywords": [
+    "slack",
+    "slack-export",
+    "wrapped",
+    "year-in-review",
+    "analytics",
+    "privacy"
+  ],
+  "bin": {
+    "slack-wrapped": "dist/cli.mjs"
+  },
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./node": "./dist/node.mjs"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "SLACK-EXPORT-FORMAT.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@zip.js/zip.js": "^2.25.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
