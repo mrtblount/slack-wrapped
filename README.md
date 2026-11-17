@@ -26,29 +26,29 @@ Period     2026-01-01 to 2026-11-13 (317 days, times in America/New_York)
 
 Totals
 ------
-16,228 messages from 34 people in 36 channels
-170,304 words (1.9 novels), 966,159 characters
-15,275 reactions, 2,199 threads with 7,323 replies
+16,302 messages from 34 people in 36 channels
+170,615 words (1.9 novels), 966,684 characters
+14,306 reactions, 2,093 threads with 7,078 replies
 
 Rhythm
 ------
-Busiest month March, busiest day Monday, quietest Saturday, peak hour 9am
+Busiest month March, busiest day Wednesday, quietest Sunday, peak hour 9am
 
 Awards (31; * = in the default ceremony)
 ----------------------------------------
 * 🦉 The Night Owl [wholesome, timing]
-    Arjun posted the most after 10pm: 166 messages after 10pm
-    then Matze (38 messages after 10pm); Hamish (19 messages after 10pm)
+    Mira posted the most after 10pm: 412 messages after 10pm
+    then Matze (54 messages after 10pm); Hamish (21 messages after 10pm)
 * 🚑 The First Responder [wholesome, social]
-    Imani was first to reply more often than anyone: first to reply 344 times, usually within 2 min
+    Imani was first to reply more often than anyone: first to reply 303 times, usually within 2 min
 * 🗣️ The Yapper [wholesome, volume]
-    Marisol sent the most messages: 1,193 messages
-    then Imani (991 messages); Hamish (769 messages)
+    Priya sent the most messages: 1,182 messages
+    then Imani (1,001 messages); Zuri (763 messages)
 
 Moments
 -------
-Busiest day   2026-03-18: 332 messages (mostly #leafy-2-launch)
-              words of the day: sold, orders, four, batch, bricks
+Busiest day   2026-03-18: 308 messages (mostly #leafy-2-launch)
+              words of the day: orders, sold, batch, bricks, four
 Biggest thread 178 replies from 32 people in #general on 2026-05-12, started by Hank
               "The Brooklyn office coffee machine has made its last cup. It went with a noise I can only describe as a sigh.…"
 ```
