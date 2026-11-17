@@ -4,7 +4,8 @@
  *
  * Only words of three letters or more matter (shorter tokens are dropped before the lookup), and
  * warm words such as "thanks", "please", "love" or "great" are deliberately NOT here: they are the
- * interesting ones.
+ * interesting ones. The English list ends with plain everyday words (dates, sizes, "meeting", "update")
+ * that every team types constantly; leaving them out lets a team's own vocabulary reach the top.
  */
 
 const ENGLISH = `
@@ -34,6 +35,17 @@ dont doesnt didnt cant wont isnt arent wasnt werent hasnt havent hadnt couldnt w
 whats heres theres youre theyre ive ill youll weve youve hes shes lets gotcha wanna gimme lemme
 actually basically literally guess mean means meant idk imo imho btw fyi tbh afaik iirc
 http https www com org net html
+today tomorrow yesterday tonight day days week weeks weekend month months year years morning afternoon
+evening night time times minute minutes mins hour hours second seconds moment later early earlier late
+monday tuesday wednesday thursday friday saturday sunday mon tue tues wed thu thur thurs fri sat sun
+january february march april june july august september october november december
+new old good bad better best big small little long short high low next soon quick quickly real fine
+people person guys folks everybody team teams work working works worked job call calls meeting meetings
+point question questions answer update updates check checking checked send sending sent start started
+starting end ended run running ran help helps helped feel feels found find finding show shows showed
+read reading write writing wrote add added adding change changed changes different possible bit kind
+idea ideas case cases number numbers side place line lines page pages anyone else anymore around
+come comes coming came call called tell told ask asking talk talking move moved moving set sets left
 `;
 
 const SPANISH = `

@@ -225,15 +225,15 @@ describe('words', () => {
   it('finds a signature word: used at least 12 times and four times more than by everyone else', async () => {
     const b = smallTeam().user('U3', { name: 'cat' });
     for (let i = 0; i < 15; i++) b.post('general', 'U1', `2026-03-10T10:${String(i).padStart(2, '0')}:00-04:00`, 'the kubernetes thing needs another coffee');
-    for (let i = 0; i < 30; i++) b.post('general', 'U2', `2026-03-11T10:${String(i).padStart(2, '0')}:00-04:00`, 'another coffee before the standup meeting please');
-    for (let i = 0; i < 11; i++) b.post('general', 'U3', `2026-03-12T10:${String(i).padStart(2, '0')}:00-04:00`, 'spreadsheet time');
-    b.post('general', 'U3', '2026-03-12T11:00:00-04:00', 'one kubernetes question about the meeting');
+    for (let i = 0; i < 30; i++) b.post('general', 'U2', `2026-03-11T10:${String(i).padStart(2, '0')}:00-04:00`, 'another coffee before the standup huddle please');
+    for (let i = 0; i < 11; i++) b.post('general', 'U3', `2026-03-12T10:${String(i).padStart(2, '0')}:00-04:00`, 'spreadsheet season');
+    b.post('general', 'U3', '2026-03-12T11:00:00-04:00', 'one kubernetes riddle about the huddle');
     const data = await b.analyze();
     expect(person(data, 'U1').signatureWord).toMatchObject({ word: 'kubernetes', count: 15 });
     expect(person(data, 'U1').signatureWord!.lift).toBeGreaterThanOrEqual(4);
     expect(person(data, 'U2').signatureWord).toMatchObject({ word: 'standup', count: 30 });
     expect(person(data, 'U3').signatureWord).toBeUndefined(); // "spreadsheet" only 11 times
-    expect(data.words.top.slice(0, 2)).toEqual([{ word: 'coffee', count: 45 }, { word: 'meeting', count: 31 }]);
+    expect(data.words.top.slice(0, 2)).toEqual([{ word: 'coffee', count: 45 }, { word: 'huddle', count: 31 }]);
     expect(data.words.top.some((w) => ['the', 'another', 'before', 'needs', 'ann', 'bob', 'general'].includes(w.word))).toBe(false);
     expect(data.moments.longestMessage).toEqual({ person: 'U2', words: 7, channelName: 'general', date: '2026-03-11' });
   });

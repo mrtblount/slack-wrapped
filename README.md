@@ -16,26 +16,41 @@ Not affiliated with Slack. Slack is a trademark of Slack Technologies, LLC.
 npx github:mrtblount/slack-wrapped "Acme Inc Slack export Jan 1 2026 - Dec 9 2026.zip"
 ```
 
-It accepts the zip Slack gives you, or the folder it unzips into, and prints a report:
+It accepts the zip Slack gives you, or the folder it unzips into, and prints a report. This is an excerpt
+for the fictional sample workspace you can download from
+[teamwrapped.com](https://teamwrapped.com/sample/FizzBuzz%20Industries%20Slack%20export%20Jan%201%202026%20-%20Nov%2013%202026.zip):
 
 ```text
-Team Wrapped: Acme Inc, 2026
-Period     2026-01-01 to 2026-12-09 (343 days, times in America/New_York)
+Team Wrapped: FizzBuzz Industries, 2026
+Period     2026-01-01 to 2026-11-13 (317 days, times in America/New_York)
 
 Totals
 ------
-48,210 messages from 34 people in 18 channels
-612,480 words (6.8 novels), 31,902 reactions, 2,318 threads with 14,077 replies
+16,228 messages from 34 people in 36 channels
+170,304 words (1.9 novels), 966,159 characters
+15,275 reactions, 2,199 threads with 7,323 replies
 
-Awards (* = in the default ceremony)
-------------------------------------
-* 🦉 The Night Owl
-    Devon posted the most after 10pm: 153 messages after 10pm
-* 🚑 The First Responder
-    Marcus was first to reply more often than anyone: first to reply 130 times, usually within 4 min
-* 🗣️ The Yapper
-    Priya sent the most messages: 6,170 messages
-...
+Rhythm
+------
+Busiest month March, busiest day Monday, quietest Saturday, peak hour 9am
+
+Awards (31; * = in the default ceremony)
+----------------------------------------
+* 🦉 The Night Owl [wholesome, timing]
+    Arjun posted the most after 10pm: 166 messages after 10pm
+    then Matze (38 messages after 10pm); Hamish (19 messages after 10pm)
+* 🚑 The First Responder [wholesome, social]
+    Imani was first to reply more often than anyone: first to reply 344 times, usually within 2 min
+* 🗣️ The Yapper [wholesome, volume]
+    Marisol sent the most messages: 1,193 messages
+    then Imani (991 messages); Hamish (769 messages)
+
+Moments
+-------
+Busiest day   2026-03-18: 332 messages (mostly #leafy-2-launch)
+              words of the day: sold, orders, four, batch, bricks
+Biggest thread 178 replies from 32 people in #general on 2026-05-12, started by Hank
+              "The Brooklyn office coffee machine has made its last cup. It went with a noise I can only describe as a sigh.…"
 ```
 
 Options:

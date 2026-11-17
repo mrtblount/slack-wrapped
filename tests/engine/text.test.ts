@@ -110,10 +110,10 @@ describe('facts', () => {
 
   it('builds the vocabulary from letters only, without stopwords, names, numbers, links or emoji', () => {
     expect(facts("The deploy isn't done, <@U1> said the Kubernetes rollout failed 3 times :tada: <https://example.com/kube>").tokens).toEqual([
-      'deploy', 'kubernetes', 'rollout', 'failed', 'times',
+      'deploy', 'kubernetes', 'rollout', 'failed', // "times" is a plain everyday word, so it is left out
     ]);
     expect(facts('ann and bob love random pizza').tokens).toEqual(['love', 'pizza']);
-    expect(facts("the team's plan and l'équipe").tokens).toEqual(['team', 'plan', 'équipe']);
+    expect(facts("the team's plan and l'équipe").tokens).toEqual(['plan', 'équipe']); // "team" is a plain everyday word
     expect(facts('q4 h2o covid19 v2').tokens).toEqual(['covid']);
   });
 
