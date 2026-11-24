@@ -202,3 +202,18 @@ Checked against eight public repositories, four of them real exports from 2016 t
    and `parent_user_id` is missing on broadcast replies and on replies to bot roots. Old markup includes
    `<@U…|name>`, `<!here|@here>` and `<!group>`. `user_profile` is absent before 2020 and on file and system
    messages. `is_general` may sit on a channel that is not called general, or on none.
+
+## Rechecked on 18 November 2026
+
+Three of the real exports (2015 to 2016, 2017 to 2020, and 2022; 49,995 messages) were read again while
+writing the guide at teamwrapped.com/slack-export-format. Everything above held where the export had the
+feature, with two exceptions that could not be reproduced in these three and are therefore left out of the
+guide:
+
+- No `<!subteam^S…|@group>` mention appears in any of them.
+- Every message with a `bot_id` and no `subtype` (14 and 3) came from a user marked `is_bot`; none had a
+  human `user`.
+
+Also seen: day files are in time order (0 of 3,949 out of order); `type`, `text` and `ts` are on every
+entry, while `user` is missing on `bot_message` and `file_comment` entries; every `tombstone` is a thread
+root with the text "This message was deleted."; almost no message carries a `channel` key (3 of 49,995).

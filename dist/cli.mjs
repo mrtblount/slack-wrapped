@@ -9713,7 +9713,7 @@ async function openZip(blob, mode) {
     const zip = new ZipReader(reader, { useWebWorkers: false, filenameValidation: "tolerant" });
     for await (const entry of zip.getEntriesGenerator({ filenameValidation: "tolerant" })) {
       if (entry.directory) continue;
-      const name = entry.filename;
+      const name = entry.filename.includes("\\") ? entry.filename.replace(/\\/g, "/") : entry.filename;
       if (!name.endsWith(".json") || name.startsWith("__MACOSX/") || name.includes("/__MACOSX/")) continue;
       const method = entry.compressionMethod;
       const direct = mode === "direct" && !entry.encrypted && (method === METHOD_STORED || method === METHOD_DEFLATE);

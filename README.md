@@ -5,8 +5,8 @@ the data ("The Night Owl", "The First Responder", "The Hype Person"). It runs on
 in a browser. Nothing is uploaded, and there is no Slack app to install.
 
 This is the analysis engine behind [Team Wrapped](https://teamwrapped.com), which draws the result as an
-animated awards show for your year-end all-hands. The engine is published here so you can read every line
-that touches your data.
+animated awards show for your year-end all-hands. The engine is published here so you can read the code
+that reads your export and works out every number.
 
 Not affiliated with Slack. Slack is a trademark of Slack Technologies, LLC.
 

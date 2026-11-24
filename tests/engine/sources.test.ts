@@ -53,6 +53,30 @@ describe('zip source', () => {
     expect(data.workspace.name).toBe('Acme Inc');
   });
 
+  it('reads a zip that was made again on Windows with backslashes between folders', async () => {
+    // Windows PowerShell's Compress-Archive and .NET before 4.6.1 write "general\2026-03-10.json".
+    const files = sampleExport().files();
+    const expected = withoutClock(await analyzeSlackExport(memorySource(files, LABEL)));
+    const flat: Record<string, string> = {};
+    for (const [path, content] of Object.entries(files)) flat[path.replaceAll('/', '\\')] = content;
+    expect(Object.keys(flat).some((path) => path.includes('\\'))).toBe(true);
+    const source = zipSource(await zipOf(flat), LABEL);
+    expect((await source.list()).sort()).toEqual(Object.keys(files).sort());
+    expect(withoutClock(await analyzeSlackExport(source))).toEqual(expected);
+
+    // The same with the folder Windows wraps around it, read both ways.
+    const wrapped: Record<string, string> = {};
+    for (const [path, content] of Object.entries(flat)) wrapped[`Acme Inc Slack export Jan 1 2026 - Mar 11 2026\\${path}`] = content;
+    for (const mode of ['direct', 'zip.js'] as const) {
+      const inFolder = zipSourceWith(await zipOf(wrapped), 'export.zip', mode);
+      expect((await inFolder.list()).sort()).toEqual(Object.keys(files).sort());
+      const data = await analyzeSlackExport(inFolder);
+      expect(data.totals.messages).toBe(4);
+      expect(data.workspace.name).toBe('Acme Inc');
+      expect(data.channels.map((c) => c.name).sort()).toEqual(['días-lindos', 'general']);
+    }
+  });
+
   it('names the workspace from the wrapping folder when the zip was renamed', async () => {
     const wrapped: Record<string, string> = {};
     for (const [path, content] of Object.entries(sampleExport().files())) wrapped[`Acme Inc Slack export Jan 1 2026 - Mar 11 2026/${path}`] = content;
